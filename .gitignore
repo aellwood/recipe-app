@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.local
+coverage
+src/composables/useAI.js
+src/main.js
+src/router/index.js
+src/stores/mealPlan.js
+src/stores/recipes.js
+src/stores/shopping.js
+vite.config.js
