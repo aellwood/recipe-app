@@ -1,17 +1,49 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Recipe } from '../types'
+import type { Recipe, Ingredient } from '../types'
+import { supabase } from '../lib/supabase'
 
-const SAMPLE_RECIPES: Recipe[] = [
+interface DbRecipe {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  image: string
+  prep_time: number
+  cook_time: number
+  servings: number
+  difficulty: string
+  tags: string[]
+  ingredients: Ingredient[]
+  steps: string[]
+  is_custom: boolean
+  created_at: string
+}
+
+function toRecipe(row: DbRecipe): Recipe {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    image: row.image,
+    prepTime: row.prep_time,
+    cookTime: row.cook_time,
+    servings: row.servings,
+    difficulty: row.difficulty as Recipe['difficulty'],
+    tags: row.tags ?? [],
+    ingredients: row.ingredients ?? [],
+    steps: row.steps ?? [],
+    isCustom: row.is_custom,
+    createdAt: row.created_at.split('T')[0],
+  }
+}
+
+const SAMPLE_RECIPES = [
   {
-    id: '1',
     title: 'Creamy Vegan Pasta',
     description: 'Rich and satisfying pasta with a silky cashew cream sauce, garlic, and nutritional yeast.',
     image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600',
-    prepTime: 10,
-    cookTime: 20,
-    servings: 4,
-    difficulty: 'Easy',
+    prep_time: 10, cook_time: 20, servings: 4, difficulty: 'Easy',
     tags: ['Italian', 'Pasta', 'Quick', 'Vegan'],
     ingredients: [
       { amount: '400', unit: 'g', name: 'spaghetti or fettuccine' },
@@ -19,7 +51,6 @@ const SAMPLE_RECIPES: Recipe[] = [
       { amount: '3', unit: 'cloves', name: 'garlic' },
       { amount: '3', unit: 'tbsp', name: 'nutritional yeast' },
       { amount: '1', unit: 'tbsp', name: 'lemon juice' },
-      { amount: '1', unit: 'cup', name: 'pasta water' },
       { amount: '', unit: '', name: 'salt and black pepper' },
       { amount: '2', unit: 'tbsp', name: 'olive oil' },
       { amount: '1', unit: 'handful', name: 'fresh parsley, chopped' },
@@ -29,21 +60,15 @@ const SAMPLE_RECIPES: Recipe[] = [
       'Blend soaked cashews, garlic, nutritional yeast, lemon juice, and a pinch of salt with 1/2 cup water until completely smooth.',
       'Reserve 1 cup pasta water, then drain pasta.',
       'Heat olive oil in the pasta pot over low heat, add cashew cream and thin with pasta water to desired consistency.',
-      'Toss in pasta and stir to coat, adding more pasta water as needed.',
-      'Season generously with salt and pepper. Serve topped with parsley.',
+      'Toss in pasta and stir to coat. Season generously with salt and pepper. Serve topped with parsley.',
     ],
-    createdAt: '2024-01-15',
-    isCustom: false,
+    is_custom: false,
   },
   {
-    id: '2',
     title: 'Chickpea Tikka Masala',
     description: 'Hearty chickpeas simmered in a fragrant, spiced tomato and coconut cream sauce.',
     image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600',
-    prepTime: 15,
-    cookTime: 35,
-    servings: 4,
-    difficulty: 'Medium',
+    prep_time: 15, cook_time: 35, servings: 4, difficulty: 'Medium',
     tags: ['Indian', 'Curry', 'Vegan'],
     ingredients: [
       { amount: '2', unit: 'cans', name: 'chickpeas (400g each), drained' },
@@ -54,8 +79,6 @@ const SAMPLE_RECIPES: Recipe[] = [
       { amount: '1', unit: 'tbsp', name: 'fresh ginger, grated' },
       { amount: '2', unit: 'tbsp', name: 'tikka masala spice blend' },
       { amount: '2', unit: 'tbsp', name: 'coconut oil' },
-      { amount: '', unit: '', name: 'salt to taste' },
-      { amount: '1', unit: 'handful', name: 'fresh coriander to serve' },
     ],
     steps: [
       'Heat coconut oil in a large pan, sauté onion until golden (8 min).',
@@ -65,47 +88,36 @@ const SAMPLE_RECIPES: Recipe[] = [
       'Add chickpeas and coconut cream, simmer 15 minutes until sauce thickens.',
       'Season with salt and serve over basmati rice, topped with coriander.',
     ],
-    createdAt: '2024-01-20',
-    isCustom: false,
+    is_custom: false,
   },
   {
-    id: '3',
     title: 'Avocado Toast with Dukkah',
     description: 'Creamy smashed avocado on toasted sourdough, topped with crunchy dukkah and lemon.',
     image: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c820?w=600',
-    prepTime: 5,
-    cookTime: 5,
-    servings: 2,
-    difficulty: 'Easy',
+    prep_time: 5, cook_time: 5, servings: 2, difficulty: 'Easy',
     tags: ['Breakfast', 'Quick', 'Vegan'],
     ingredients: [
       { amount: '2', unit: 'slices', name: 'sourdough bread' },
       { amount: '2', unit: '', name: 'ripe avocados' },
       { amount: '1', unit: '', name: 'lemon, juiced' },
-      { amount: '2', unit: 'tbsp', name: 'dukkah (nut and spice blend)' },
+      { amount: '2', unit: 'tbsp', name: 'dukkah' },
       { amount: '1', unit: 'tbsp', name: 'extra virgin olive oil' },
       { amount: '', unit: '', name: 'flaky salt and black pepper' },
-      { amount: '', unit: '', name: 'chilli flakes (optional)' },
     ],
     steps: [
       'Toast the sourdough bread to your desired crispness.',
       'Halve and pit the avocados. Scoop flesh into a bowl.',
       'Mash avocado with lemon juice, salt, and pepper until just chunky.',
       'Spread generously on toast.',
-      'Drizzle with olive oil, sprinkle with dukkah, chilli flakes, and flaky salt.',
+      'Drizzle with olive oil, sprinkle with dukkah and flaky salt.',
     ],
-    createdAt: '2024-02-01',
-    isCustom: false,
+    is_custom: false,
   },
   {
-    id: '4',
     title: 'Black Bean Tacos',
     description: 'Smoky spiced black beans in crispy corn tortillas with all the fresh vegan fixings.',
     image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600',
-    prepTime: 10,
-    cookTime: 15,
-    servings: 4,
-    difficulty: 'Easy',
+    prep_time: 10, cook_time: 15, servings: 4, difficulty: 'Easy',
     tags: ['Mexican', 'Quick', 'Vegan'],
     ingredients: [
       { amount: '2', unit: 'cans', name: 'black beans (400g each), drained' },
@@ -115,7 +127,6 @@ const SAMPLE_RECIPES: Recipe[] = [
       { amount: '1', unit: '', name: 'tomato, diced' },
       { amount: '1', unit: 'cup', name: 'shredded red cabbage' },
       { amount: '1', unit: '', name: 'lime, juiced' },
-      { amount: '', unit: '', name: 'fresh coriander and salsa to serve' },
     ],
     steps: [
       'Heat a pan over medium heat, add black beans and taco seasoning with a splash of water.',
@@ -125,27 +136,14 @@ const SAMPLE_RECIPES: Recipe[] = [
       'Fill tortillas with black beans, avocado, tomato, and cabbage.',
       'Squeeze lime over each taco and top with coriander and salsa.',
     ],
-    createdAt: '2024-02-10',
-    isCustom: false,
+    is_custom: false,
   },
 ]
 
-const SEED_VERSION = '2'
-
-function loadRecipes(): Recipe[] {
-  if (localStorage.getItem('recipesSeedVersion') !== SEED_VERSION) {
-    localStorage.removeItem('recipes')
-    localStorage.setItem('recipesSeedVersion', SEED_VERSION)
-  }
-  return JSON.parse(localStorage.getItem('recipes') ?? 'null') ?? SAMPLE_RECIPES
-}
-
 export const useRecipesStore = defineStore('recipes', () => {
-  const recipes = ref<Recipe[]>(loadRecipes())
-
-  function save() {
-    localStorage.setItem('recipes', JSON.stringify(recipes.value))
-  }
+  const recipes = ref<Recipe[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
   const allTags = computed<string[]>(() => {
     const tags = new Set<string>()
@@ -153,33 +151,75 @@ export const useRecipesStore = defineStore('recipes', () => {
     return [...tags].sort()
   })
 
+  async function init(): Promise<void> {
+    loading.value = true
+    error.value = null
+    const { data, error: err } = await supabase
+      .from('recipes')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (err) { error.value = err.message; loading.value = false; return }
+    recipes.value = (data as DbRecipe[]).map(toRecipe)
+    if (recipes.value.length === 0) await seedSampleRecipes()
+    loading.value = false
+  }
+
+  function reset(): void {
+    recipes.value = []
+  }
+
+  async function seedSampleRecipes(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const rows = SAMPLE_RECIPES.map(r => ({ ...r, user_id: user.id }))
+    const { data, error: err } = await supabase.from('recipes').insert(rows).select()
+    if (err || !data) return
+    recipes.value = (data as DbRecipe[]).map(toRecipe)
+  }
+
   function getById(id: string): Recipe | undefined {
     return recipes.value.find(r => r.id === id)
   }
 
-  function addRecipe(recipe: Omit<Recipe, 'id' | 'createdAt' | 'isCustom'>): Recipe {
-    const newRecipe: Recipe = {
-      ...recipe,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString().split('T')[0],
-      isCustom: true,
-    }
+  async function addRecipe(recipe: Omit<Recipe, 'id' | 'createdAt' | 'isCustom'>): Promise<Recipe | null> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    const { data, error: err } = await supabase.from('recipes').insert({
+      user_id: user.id,
+      title: recipe.title, description: recipe.description, image: recipe.image,
+      prep_time: recipe.prepTime, cook_time: recipe.cookTime, servings: recipe.servings,
+      difficulty: recipe.difficulty, tags: recipe.tags,
+      ingredients: recipe.ingredients, steps: recipe.steps,
+      is_custom: true,
+    }).select().single()
+    if (err || !data) { console.error(err); return null }
+    const newRecipe = toRecipe(data as DbRecipe)
     recipes.value.unshift(newRecipe)
-    save()
     return newRecipe
   }
 
-  function updateRecipe(id: string, updates: Partial<Recipe>): void {
+  async function updateRecipe(id: string, updates: Partial<Recipe>): Promise<void> {
+    const dbUpdates: Record<string, unknown> = {}
+    if (updates.title !== undefined) dbUpdates.title = updates.title
+    if (updates.description !== undefined) dbUpdates.description = updates.description
+    if (updates.image !== undefined) dbUpdates.image = updates.image
+    if (updates.prepTime !== undefined) dbUpdates.prep_time = updates.prepTime
+    if (updates.cookTime !== undefined) dbUpdates.cook_time = updates.cookTime
+    if (updates.servings !== undefined) dbUpdates.servings = updates.servings
+    if (updates.difficulty !== undefined) dbUpdates.difficulty = updates.difficulty
+    if (updates.tags !== undefined) dbUpdates.tags = updates.tags
+    if (updates.ingredients !== undefined) dbUpdates.ingredients = updates.ingredients
+    if (updates.steps !== undefined) dbUpdates.steps = updates.steps
+    const { error: err } = await supabase.from('recipes').update(dbUpdates).eq('id', id)
+    if (err) { console.error(err); return }
     const idx = recipes.value.findIndex(r => r.id === id)
-    if (idx !== -1) {
-      recipes.value[idx] = { ...recipes.value[idx], ...updates }
-      save()
-    }
+    if (idx !== -1) recipes.value[idx] = { ...recipes.value[idx], ...updates }
   }
 
-  function deleteRecipe(id: string): void {
+  async function deleteRecipe(id: string): Promise<void> {
+    const { error: err } = await supabase.from('recipes').delete().eq('id', id)
+    if (err) { console.error(err); return }
     recipes.value = recipes.value.filter(r => r.id !== id)
-    save()
   }
 
   function searchRecipes(query: string, tags: string[] = [], ingredientSearch = ''): Recipe[] {
@@ -191,5 +231,5 @@ export const useRecipesStore = defineStore('recipes', () => {
     })
   }
 
-  return { recipes, allTags, getById, addRecipe, updateRecipe, deleteRecipe, searchRecipes }
+  return { recipes, loading, error, allTags, init, reset, getById, addRecipe, updateRecipe, deleteRecipe, searchRecipes }
 })

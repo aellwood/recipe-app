@@ -81,16 +81,16 @@ const newItem = ref('')
 const unchecked = computed(() => shoppingStore.items.filter(i => !i.checked))
 const checked = computed(() => shoppingStore.items.filter(i => i.checked))
 
-function addItem() {
-  shoppingStore.addItem(newItem.value)
+async function addItem() {
+  await shoppingStore.addItem(newItem.value)
   newItem.value = ''
 }
 
-function generateFromPlan() {
-  shoppingStore.generateFromMealPlan()
+async function generateFromPlan() {
+  await shoppingStore.generateFromMealPlan()
 }
 
-function confirmClearAll() {
-  if (confirm('Clear the entire shopping list?')) shoppingStore.clearAll()
+async function confirmClearAll() {
+  if (confirm('Clear the entire shopping list?')) await shoppingStore.clearAll()
 }
 </script>

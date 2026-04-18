@@ -104,9 +104,9 @@ const successMessage = ref('')
 const picker = ref({ open: false, day: '', meal: '' })
 const pickerSearch = ref('')
 
-function getRecipe(id) { return recipesStore.getById(id) }
+function getRecipe(id: string) { return recipesStore.getById(id) }
 
-function openPicker(day, meal) {
+function openPicker(day: string, meal: string) {
   picker.value = { open: true, day, meal }
   pickerSearch.value = ''
 }
@@ -115,19 +115,19 @@ const filteredPickerRecipes = computed(() =>
   recipesStore.searchRecipes(pickerSearch.value)
 )
 
-function selectRecipe(id) {
-  mealPlanStore.setMeal(picker.value.day, picker.value.meal, id)
+async function selectRecipe(id: string) {
+  await mealPlanStore.setMeal(picker.value.day, picker.value.meal, id)
   picker.value.open = false
 }
 
-function generateShopping() {
-  shoppingStore.generateFromMealPlan()
+async function generateShopping() {
+  await shoppingStore.generateFromMealPlan()
   successMessage.value = 'Shopping list updated from your meal plan!'
   setTimeout(() => { successMessage.value = '' }, 3000)
   router.push('/shopping')
 }
 
-function confirmClear() {
-  if (confirm('Clear the entire week?')) mealPlanStore.clearWeek()
+async function confirmClear() {
+  if (confirm('Clear the entire week?')) await mealPlanStore.clearWeek()
 }
 </script>

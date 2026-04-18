@@ -83,8 +83,8 @@
         </div>
 
         <div class="flex gap-3 pt-4">
-          <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-medium transition-colors">
-            {{ isEdit ? 'Save Changes' : 'Create Recipe' }}
+          <button type="submit" :disabled="submitting" class="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-medium transition-colors">
+            {{ submitting ? 'Saving…' : (isEdit ? 'Save Changes' : 'Create Recipe') }}
           </button>
           <button type="button" @click="$router.back()" class="border border-gray-200 text-gray-600 px-6 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors">
             Cancel
@@ -98,6 +98,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { Difficulty } from '../types'
 import { useRecipesStore } from '../stores/recipes'
 
 const route = useRoute()
@@ -105,6 +106,7 @@ const router = useRouter()
 const recipesStore = useRecipesStore()
 
 const isEdit = computed(() => !!route.params.id)
+const submitting = ref(false)
 
 const form = ref({
   title: '',
@@ -113,8 +115,8 @@ const form = ref({
   prepTime: 15,
   cookTime: 30,
   servings: 4,
-  difficulty: 'Medium',
-  tags: [],
+  difficulty: 'Medium' as Difficulty,
+  tags: [] as string[],
   ingredients: [{ amount: '', unit: '', name: '' }],
   steps: [''],
 })
@@ -132,11 +134,12 @@ onMounted(() => {
 })
 
 function addIngredient() { form.value.ingredients.push({ amount: '', unit: '', name: '' }) }
-function removeIngredient(i) { form.value.ingredients.splice(i, 1) }
+function removeIngredient(i: number) { form.value.ingredients.splice(i, 1) }
 function addStep() { form.value.steps.push('') }
-function removeStep(i) { form.value.steps.splice(i, 1) }
+function removeStep(i: number) { form.value.steps.splice(i, 1) }
 
-function submit() {
+async function submit() {
+  submitting.value = true
   const tags = tagsInput.value.split(',').map(t => t.trim()).filter(Boolean)
   const data = {
     ...form.value,
@@ -145,12 +148,13 @@ function submit() {
     steps: form.value.steps.filter(s => s.trim()),
   }
   if (isEdit.value) {
-    recipesStore.updateRecipe(route.params.id, data)
+    await recipesStore.updateRecipe(route.params.id as string, data)
     router.push(`/recipes/${route.params.id}`)
   } else {
-    const newRecipe = recipesStore.addRecipe(data)
-    router.push(`/recipes/${newRecipe.id}`)
+    const newRecipe = await recipesStore.addRecipe(data)
+    if (newRecipe) router.push(`/recipes/${newRecipe.id}`)
   }
+  submitting.value = false
 }
 </script>
 

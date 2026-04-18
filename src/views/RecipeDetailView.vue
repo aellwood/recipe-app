@@ -125,16 +125,17 @@ const planDay = ref('')
 const planMeal = ref('')
 const addedMessage = ref(false)
 
-function addToMealPlan() {
-  if (!planDay.value || !planMeal.value) return
-  mealPlanStore.setMeal(planDay.value, planMeal.value, recipe.value.id)
+async function addToMealPlan() {
+  if (!planDay.value || !planMeal.value || !recipe.value) return
+  await mealPlanStore.setMeal(planDay.value, planMeal.value, recipe.value.id)
   addedMessage.value = true
   setTimeout(() => { addedMessage.value = false }, 2000)
 }
 
-function confirmDelete() {
+async function confirmDelete() {
+  if (!recipe.value) return
   if (confirm(`Delete "${recipe.value.title}"?`)) {
-    recipesStore.deleteRecipe(recipe.value.id)
+    await recipesStore.deleteRecipe(recipe.value.id)
     router.push('/recipes')
   }
 }
