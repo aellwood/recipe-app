@@ -11,7 +11,14 @@
       "WebSearch",
       "WebFetch(domain:images.unsplash.com)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git commit -m ' *)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(npm init *)",
+      "Bash(npx playwright *)",
+      "Bash(git push *)"
     ]
   }
 }
